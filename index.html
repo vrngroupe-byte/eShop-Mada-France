@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#10284c">
+<meta name="description" content="eShop Mada France : commandez vos articles préférés en France et faites-les livrer à Madagascar.">
+<title>eShop Mada France</title>
+<style>
+:root{--navy:#10284c;--red:#e63946;--blue:#2463eb;--light:#f4f7fb;--text:#182334}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:#fff}
+header{background:var(--navy);color:white;padding:20px 6%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-size:20px;font-weight:800;letter-spacing:-.5px}.logo span{color:#ff626b}
+header small{font-size:12px;color:#dce6f5}
+.hero{padding:54px 6% 48px;background:linear-gradient(135deg,#10284c,#1e467b);color:white}
+.tag{display:inline-block;border:1px solid #8298b8;border-radius:30px;padding:7px 12px;font-size:12px}
+h1{font-size:clamp(34px,8vw,54px);line-height:1.08;letter-spacing:-1.8px;margin:22px 0 15px;max-width:650px}
+.hero p{font-size:16px;line-height:1.7;color:#e1e9f5;max-width:540px}
+.btn{display:inline-block;background:var(--red);color:white;border:0;border-radius:10px;padding:14px 20px;font-weight:700;text-decoration:none;font-size:15px;cursor:pointer}
+section{padding:34px 6%}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue);font-weight:800}
+h2{font-size:26px;letter-spacing:-.6px;margin:8px 0 10px}.muted{color:#657186;line-height:1.6;font-size:14px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+.step{background:var(--light);padding:16px;border-radius:14px}.step b{display:block;margin:10px 0 6px}.step p{font-size:13px;line-height:1.5;color:#657186;margin:0}
+.num{background:white;border-radius:10px;width:38px;height:38px;display:grid;place-items:center;color:var(--blue);font-weight:800}
+form{margin-top:20px;background:var(--light);padding:20px;border-radius:16px}
+label{display:block;font-size:13px;font-weight:700;margin:14px 0 7px}
+input,select,textarea{width:100%;padding:13px;border:1px solid #d5dce7;border-radius:9px;background:white;font:inherit;font-size:15px;color:var(--text)}
+textarea{min-height:80px;resize:vertical}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.note{font-size:12px;color:#657186;line-height:1.6}
+.calc{background:white;border:1px solid #dbe3ef;border-radius:12px;padding:15px;margin:18px 0}
+.total{font-size:24px;font-weight:800;color:var(--navy)}
+footer{background:#0b1d36;color:white;padding:26px 6%;font-size:12px;line-height:1.7}
+@media(max-width:520px){.steps{grid-template-columns:1fr}.hero{padding-top:40px}.grid{grid-template-columns:1fr}section{padding-top:28px;padding-bottom:28px}}
+</style>
+</head>
+<body>
+<header><div class="logo">eSHOP <span>MADA</span> FRANCE</div><small>FRANCE → MADAGASCAR</small></header>
+<main>
+<div class="hero">
+<span class="tag">VOS ENVIES, DEPUIS LA FRANCE 🇫🇷</span>
+<h1>La France dans votre panier.</h1>
+<p>Mode, sneakers, beauté et bien plus. Envoyez-nous le lien de votre article préféré : nous l'achetons pour vous et organisons son expédition vers Madagascar.</p>
+<a class="btn" href="#commande">Demander un achat ↗</a>
+</div>
+<section>
+<div class="eyebrow">Simple et pratique</div><h2>Comment ça marche ?</h2>
+<p class="muted">De votre lien jusqu'à votre colis, nous vous accompagnons à chaque étape.</p>
+<div class="steps">
+<div class="step"><div class="num">01</div><b>Envoyez votre lien</b><p>Choisissez un article sur votre boutique française préférée et indiquez les options.</p></div>
+<div class="step"><div class="num">02</div><b>Recevez votre devis</b><p>Nous confirmons le prix, les frais de service et les modalités de paiement.</p></div>
+<div class="step"><div class="num">03</div><b>Recevez votre colis</b><p>Après réception en France, les frais d'expédition sont confirmés avant l'envoi.</p></div>
+</div>
+</section>
+<section id="commande">
+<div class="eyebrow">Votre demande</div><h2>Que souhaitez-vous acheter ?</h2>
+<p class="muted">Remplissez ce formulaire pour préparer votre demande. Cette première version est une maquette : elle n'enregistre ni n'envoie encore vos informations.</p>
+<form id="orderForm">
+<label for="link">Lien du produit *</label><input id="link" type="url" placeholder="https://www.exemple.fr/mon-article" required>
+<div class="grid">
+<div><label for="size">Taille / modèle</label><input id="size" placeholder="Ex. : M, 38, noir"></div>
+<div><label for="qty">Quantité</label><input id="qty" type="number" min="1" value="1" required></div>
+</div>
+<label for="details">Précisions</label><textarea id="details" placeholder="Couleur, variante, autre information…"></textarea>
+<label for="name">Nom et prénom *</label><input id="name" autocomplete="name" required>
+<div class="grid">
+<div><label for="phone">Téléphone / WhatsApp *</label><input id="phone" type="tel" placeholder="+261…" required></div>
+<div><label for="city">Ville de livraison *</label><input id="city" placeholder="Ex. : Antananarivo" required></div>
+</div>
+<label for="payment">Mode de paiement souhaité</label>
+<select id="payment"><option>MVola (validation manuelle au lancement)</option><option>Virement bancaire</option><option>Autre Mobile Money à confirmer</option></select>
+<div class="calc"><div class="muted">Conversion indicative du prix produit</div><label for="price">Prix affiché en euros (€)</label><input id="price" type="number" min="0" step="0.01" placeholder="Ex. : 49.95"><label for="rate">Taux de conversion indicatif (Ar pour 1 €)</label><input id="rate" type="number" min="1" value="4800"><p class="muted">Estimation du prix produit en ariary, hors commission et transport :</p><div class="total" id="estimate">— Ar</div></div>
+<button class="btn" type="submit">Préparer ma demande</button>
+<p class="note">Aucun paiement n'est effectué sur cette page. Le devis définitif, la disponibilité du produit, la commission et les frais de transport seront confirmés avant tout achat.</p>
+</form>
+</section>
+</main>
+<footer><b>eShop Mada France</b><br>Votre shopping en France, votre livraison à Madagascar.<br>Première version de démonstration — commandes et paiements non encore connectés.</footer>
+<script>
+const price=document.getElementById('price'),rate=document.getElementById('rate'),estimate=document.getElementById('estimate');
+function update(){const p=Number(price.value),r=Number(rate.value);estimate.textContent=price.value!==''&&p>=0&&r>0?Math.round(p*r).toLocaleString('fr-FR')+' Ar':'— Ar'}
+price.addEventListener('input',update);rate.addEventListener('input',update);
+document.getElementById('orderForm').addEventListener('submit',function(e){e.preventDefault();alert('Merci ! Cette maquette ne transmet pas encore la demande. La prochaine étape sera de connecter le formulaire à notre base de données.');});
+</script>
+</body>
+</html>
