@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration — eShop Mada France</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f4f6fa;color:#17243b;margin:0;padding:20px}
+    main{max-width:1050px;margin:auto}
+    .panel{background:white;border-radius:14px;padding:22px;margin:16px 0;box-shadow:0 3px 16px #17243b12}
+    h1{font-size:26px}input,button{font:inherit;padding:12px;border-radius:8px}
+    input{border:1px solid #ccd3df;box-sizing:border-box;width:100%;margin:8px 0 12px}
+    button{background:#183a70;color:white;border:0;cursor:pointer}
+    button:disabled{opacity:.5}
+    .hidden{display:none}.muted{color:#64748b}.error{color:#b42318}
+    .order{border:1px solid #e1e6ee;padding:16px;border-radius:10px;margin:14px 0;background:#fff}
+    .item{background:#f7f9fc;padding:12px;margin:10px 0;border-radius:8px;overflow-wrap:anywhere}
+    a{color:#1458a6}.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    @media(max-width:600px){body{padding:10px}.panel{padding:15px}.top{align-items:flex-start}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>eShop Mada France</h1>
+  <p class="muted">Espace administrateur privé</p>
+
+  <section id="login" class="panel">
+    <h2>Connexion</h2>
+    <form id="loginForm">
+      <label for="password">Mot de passe administrateur</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <button id="loginButton" type="submit">Se connecter</button>
+    </form>
+    <p id="loginMessage" role="status"></p>
+  </section>
+
+  <section id="dashboard" class="hidden">
+    <div class="panel top">
+      <div>
+        <h2>Commandes</h2>
+        <p id="summary" class="muted">Chargement…</p>
+      </div>
+      <button id="refresh">Actualiser</button>
+    </div>
+    <div id="orders"></div>
+  </section>
+</main>
+
+<script>
+const loginBox = document.getElementById("login");
+const dashboard = document.getElementById("dashboard");
+const loginMessage = document.getElementById("loginMessage");
+const ordersBox = document.getElementById("orders");
+
+async function request(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "include",
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Une erreur est survenue.");
+  return data;
+}
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const button = document.getElementById("loginButton");
+  button.disabled = true;
+  loginMessage.className = "";
+  loginMessage.textContent = "Connexion en cours…";
+
+  try {
+    await request("/.netlify/functions/admin-login", {
+      method: "POST",
+      body: JSON.stringify({
+        password: document.getElementById("password").value
+      })
+    });
+    document.getElementById("password").value = "";
+    loginBox.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+    await loadOrders();
+  } catch (error) {
+    loginMessage.className = "error";
+    loginMessage.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function loadOrders() {
+  ordersBox.textContent = "Chargement des commandes…";
+  try {
+    const data = await request("/.netlify/functions/admin-orders");
+    const orders = data.orders || [];
+    document.getElementById("summary").textContent =
+      `${orders.length} commande(s) trouvée(s)`;
+    ordersBox.replaceChildren();
+
+    if (!orders.length) {
+      ordersBox.textContent = "Aucune commande pour le moment.";
+      return;
+    }
+
+    for (const order of orders) {
+      const card = document.createElement("article");
+      card.className = "panel order";
+      const heading = document.createElement("h3");
+      heading.textContent = `Commande ${order.order_number ?? order.id ?? ""}`;
+      card.append(heading);
+
+      const fields = [
+        ["Client", order.customer_name],
+        ["Téléphone", order.phone_whatsapp],
+        ["Facebook", order.facebook_url],
+        ["Ville", order.city],
+        ["Paiement souhaité", order.payment_method],
+        ["Statut", order.status],
+        ["Montant estimé (Ar)", order.estimated_total_ariary]
+      ];
+
+      for (const [label, value] of fields) {
+        if (value === undefined || value === null || value === "") continue;
+        const p = document.createElement("p");
+        p.textContent = `${label} : ${value}`;
+        card.append(p);
+      }
+
+      const itemsTitle = document.createElement("h4");
+      itemsTitle.textContent = "Articles";
+      card.append(itemsTitle);
+
+      for (const item of (order.items || [])) {
+        const box = document.createElement("div");
+        box.className = "item";
+        const details = [
+          ["Catégorie", item.category],
+          ["Lien produit", item.product_url],
+          ["Prix unitaire (€)", item.price_eur],
+          ["Quantité", item.quantity],
+          ["Taille / modèle", item.size_model],
+          ["Commentaire", item.comment],
+          ["Chemin photo", item.photo_path]
+        ];
+
+        for (const [label, value] of details) {
+          if (value === undefined || value === null || value === "") continue;
+          const p = document.createElement("p");
+          if (label === "Lien produit" || label === "Chemin photo" && /^https:\/\//.test(String(value))) {
+            const a = document.createElement("a");
+            a.href = String(value);
+            a.textContent = label === "Lien produit" ? "Ouvrir le produit" : "Ouvrir la photo";
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            p.append(a);
+          } else {
+            p.textContent = `${label} : ${value}`;
+          }
+          box.append(p);
+        }
+        if (!box.childNodes.length) box.textContent = "Détails indisponibles.";
+        card.append(box);
+      }
+      ordersBox.append(card);
+    }
+  } catch (error) {
+    ordersBox.textContent = "";
+    const p = document.createElement("p");
+    p.className = "error";
+    p.textContent = error.message + " — vérifie que tu es connecté et que les fonctions sont déployées.";
+    ordersBox.append(p);
+  }
+}
+
+document.getElementById("refresh").addEventListener("click", loadOrders);
+</script>
+</body>
+</html>
