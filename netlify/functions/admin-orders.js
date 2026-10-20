@@ -96,6 +96,34 @@ exports.handler = async (event) => {
     }
 
     const items = await itemsResponse.json();
+    const photoPaths = items
+  .map(item => item.photo_path)
+  .filter(Boolean);
+
+const photoUrls = {};
+
+await Promise.all(photoPaths.map(async (path) => {
+  const response = await fetch(
+    `${url}/storage/v1/object/sign/product-photos/${encodeURIComponent(path)}`,
+    {
+      method: "POST",
+      headers: {
+        ...supabaseHeaders,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ expiresIn: 3600 })
+    }
+  );
+
+  if (response.ok) {
+    const data = await response.json();
+    photoUrls[path] = `${url}/storage/v1${data.signedURL}`;
+  }
+}));
+
+items.forEach(item => {
+  item.photo_url = photoUrls[item.photo_path] || null;
+});
 
     const result = orders.map((order) => ({
       ...order,
