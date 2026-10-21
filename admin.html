@@ -9,15 +9,31 @@
     body{font-family:Arial,sans-serif;background:#f4f6fa;color:#17243b;margin:0;padding:20px}
     main{max-width:1050px;margin:auto}
     .panel{background:white;border-radius:14px;padding:22px;margin:16px 0;box-shadow:0 3px 16px #17243b12}
-    h1{font-size:26px}input,button{font:inherit;padding:12px;border-radius:8px}
-    input{border:1px solid #ccd3df;box-sizing:border-box;width:100%;margin:8px 0 12px}
-    button{background:#183a70;color:white;border:0;cursor:pointer}
-    button:disabled{opacity:.5}
-    .hidden{display:none}.muted{color:#64748b}.error{color:#b42318}
+    h1{font-size:26px}
+    input,textarea,button{font:inherit;padding:12px;border-radius:8px}
+    input,textarea{border:1px solid #ccd3df;box-sizing:border-box;width:100%;margin:8px 0 12px}
+    textarea{min-height:85px;resize:vertical}
+    button{background:#183a70;color:white;border:0;cursor:pointer;margin:4px 4px 4px 0}
+    button:disabled{opacity:.5;cursor:wait}
+    .danger{background:#b42318}
+    .success{background:#18794e}
+    .secondary{background:#52637a}
+    .hidden{display:none}
+    .muted{color:#64748b}
+    .error{color:#b42318}
+    .notice{color:#18794e}
     .order{border:1px solid #e1e6ee;padding:16px;border-radius:10px;margin:14px 0;background:#fff}
     .item{background:#f7f9fc;padding:12px;margin:10px 0;border-radius:8px;overflow-wrap:anywhere}
-    a{color:#1458a6}.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    @media(max-width:600px){body{padding:10px}.panel{padding:15px}.top{align-items:flex-start}}
+    a{color:#1458a6}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .actions{border-top:1px solid #e1e6ee;margin-top:16px;padding-top:12px}
+    .status{font-weight:bold;overflow-wrap:anywhere}
+    @media(max-width:600px){
+      body{padding:10px}
+      .panel{padding:15px}
+      .top{align-items:flex-start;flex-wrap:wrap}
+      button{max-width:100%}
+    }
   </style>
 </head>
 <body>
@@ -41,7 +57,7 @@
         <h2>Commandes</h2>
         <p id="summary" class="muted">Chargement…</p>
       </div>
-      <button id="refresh">Actualiser</button>
+      <button id="refresh" type="button">Actualiser</button>
     </div>
     <div id="orders"></div>
   </section>
@@ -57,7 +73,10 @@ async function request(url, options = {}) {
   const response = await fetch(url, {
     credentials: "include",
     ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || "Une erreur est survenue.");
@@ -90,8 +109,81 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   }
 });
 
+function addText(parent, label, value) {
+  if (value === undefined || value === null || value === "") return;
+  const p = document.createElement("p");
+  p.textContent = label + " : " + value;
+  parent.append(p);
+}
+
+function addLink(parent, label, value) {
+  if (!value) return;
+  const p = document.createElement("p");
+  const a = document.createElement("a");
+  a.href = String(value);
+  a.textContent = label;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  p.append(a);
+  parent.append(p);
+}
+
+function addButton(parent, label, action, order, commentBox, messageBox, className = "") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  if (className) button.className = className;
+
+  button.addEventListener("click", async () => {
+    const comment = commentBox.value.trim();
+
+    if (["refuse_item", "payment_refused"].includes(action) && !comment) {
+      messageBox.className = "error";
+      messageBox.textContent = "Ajoute un motif avant de refuser.";
+      commentBox.focus();
+      return;
+    }
+
+    const confirmText = {
+      validate_item: "Valider les articles et le prix de cette commande ?",
+      refuse_item: "Refuser cette commande ?",
+      payment_confirmed: "Confirmer que le paiement a bien été reçu ?",
+      payment_refused: "Refuser le paiement signalé ?",
+      article_ordered: "Confirmer que l’article a été commandé ?",
+      shipped: "Confirmer que la commande a été expédiée ?"
+    };
+
+    if (!window.confirm(confirmText[action] || "Confirmer cette action ?")) return;
+
+    button.disabled = true;
+    messageBox.className = "";
+    messageBox.textContent = "Enregistrement…";
+
+    try {
+      await request("/.netlify/functions/admin-update-order", {
+        method: "POST",
+        body: JSON.stringify({
+          order_id: order.id,
+          action,
+          comment
+        })
+      });
+      messageBox.className = "notice";
+      messageBox.textContent = "Modification enregistrée.";
+      await loadOrders();
+    } catch (error) {
+      messageBox.className = "error";
+      messageBox.textContent = error.message;
+      button.disabled = false;
+    }
+  });
+
+  parent.append(button);
+}
+
 async function loadOrders() {
   ordersBox.textContent = "Chargement des commandes…";
+
   try {
     const data = await request("/.netlify/functions/admin-orders");
     const orders = data.orders || [];
@@ -107,26 +199,21 @@ async function loadOrders() {
     for (const order of orders) {
       const card = document.createElement("article");
       card.className = "panel order";
+
       const heading = document.createElement("h3");
       heading.textContent = `Commande ${order.order_number ?? order.id ?? ""}`;
       card.append(heading);
 
-      const fields = [
-        ["Client", order.customer_name],
-        ["Téléphone", order.phone_whatsapp],
-        ["Facebook", order.facebook_url],
-        ["Ville", order.city],
-        ["Paiement souhaité", order.payment_method],
-        ["Statut", order.status],
-        ["Montant estimé (Ar)", order.estimated_total_ariary]
-      ];
-
-      for (const [label, value] of fields) {
-        if (value === undefined || value === null || value === "") continue;
-        const p = document.createElement("p");
-        p.textContent = `${label} : ${value}`;
-        card.append(p);
-      }
+      addText(card, "Client", order.customer_name);
+      addText(card, "Téléphone", order.phone_whatsapp);
+      addLink(card, "Ouvrir le profil Facebook", order.facebook_url);
+      addText(card, "Ville", order.city);
+      addText(card, "Paiement souhaité", order.payment_method);
+      addText(card, "Statut de la commande", order.status);
+      addText(card, "Statut du paiement", order.payment_status);
+      addText(card, "Montant estimé (Ar)", order.estimated_total_ariary);
+      addText(card, "Commentaire administrateur", order.admin_comment);
+      addText(card, "Commentaire paiement", order.payment_comment);
 
       const itemsTitle = document.createElement("h4");
       itemsTitle.textContent = "Articles";
@@ -135,41 +222,60 @@ async function loadOrders() {
       for (const item of (order.items || [])) {
         const box = document.createElement("div");
         box.className = "item";
-        const details = [
-          ["Catégorie", item.category],
-          ["Lien produit", item.product_url],
-          ["Prix unitaire (€)", item.price_eur],
-          ["Quantité", item.quantity],
-          ["Taille / modèle", item.size_model],
-          ["Commentaire", item.comment],
-          ["Chemin photo", item.photo_path]
-        ];
-
-        for (const [label, value] of details) {
-          if (value === undefined || value === null || value === "") continue;
-          const p = document.createElement("p");
-          if (label === "Lien produit" || label === "Chemin photo" && /^https:\/\//.test(String(value))) {
-            const a = document.createElement("a");
-            a.href = String(value);
-            a.textContent = label === "Lien produit" ? "Ouvrir le produit" : "Ouvrir la photo";
-            a.target = "_blank";
-            a.rel = "noopener noreferrer";
-            p.append(a);
-          } else {
-            p.textContent = `${label} : ${value}`;
-          }
-          box.append(p);
-        }
-        if (!box.childNodes.length) box.textContent = "Détails indisponibles.";
+        addText(box, "Catégorie", item.category);
+        addLink(box, "Ouvrir le produit", item.product_url);
+        addText(box, "Prix unitaire (€)", item.price_eur);
+        addText(box, "Quantité", item.quantity);
+        addText(box, "Taille / modèle", item.size_model);
+        addText(box, "Commentaire du client", item.comment);
         card.append(box);
       }
+
+      const actions = document.createElement("section");
+      actions.className = "actions";
+      const title = document.createElement("h4");
+      title.textContent = "Gestion de la commande";
+      actions.append(title);
+
+      const label = document.createElement("label");
+      label.textContent = "Commentaire ou motif de refus";
+      const commentBox = document.createElement("textarea");
+      commentBox.placeholder = "Ex. : prix confirmé, article indisponible, paiement non reçu…";
+      commentBox.value = order.admin_comment || "";
+      label.append(commentBox);
+      actions.append(label);
+
+      const messageBox = document.createElement("p");
+      messageBox.setAttribute("role", "status");
+      actions.append(messageBox);
+
+      addButton(actions, "Valider article et prix", "validate_item",
+        order, commentBox, messageBox, "success");
+
+      addButton(actions, "Refuser la commande", "refuse_item",
+        order, commentBox, messageBox, "danger");
+
+      addButton(actions, "Confirmer le paiement reçu", "payment_confirmed",
+        order, commentBox, messageBox, "success");
+
+      addButton(actions, "Refuser le paiement", "payment_refused",
+        order, commentBox, messageBox, "danger");
+
+      addButton(actions, "Article commandé", "article_ordered",
+        order, commentBox, messageBox);
+
+      addButton(actions, "Expédié", "shipped",
+        order, commentBox, messageBox);
+
+      card.append(actions);
       ordersBox.append(card);
     }
   } catch (error) {
-    ordersBox.textContent = "";
+    ordersBox.replaceChildren();
     const p = document.createElement("p");
     p.className = "error";
-    p.textContent = error.message + " — vérifie que tu es connecté et que les fonctions sont déployées.";
+    p.textContent = error.message +
+      " — vérifie la connexion et le déploiement des fonctions Netlify.";
     ordersBox.append(p);
   }
 }
