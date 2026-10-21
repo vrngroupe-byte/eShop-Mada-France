@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Suivi de commande — eShop Mada France</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: Arial, sans-serif;
+      background: #f5f6f8; color: #172033;
+    }
+    header {
+      background: #101b35; color: white;
+      padding: 22px 16px; text-align: center;
+    }
+    header h1 { margin: 0; font-size: 23px; }
+    header p { margin-bottom: 0; color: #d4dbea; }
+    main {
+      max-width: 620px; margin: 35px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: white; padding: 25px;
+      border-radius: 14px; box-shadow: 0 5px 22px #15203b12;
+    }
+    label { display: block; font-weight: bold; margin: 18px 0 8px; }
+    input {
+      width: 100%; padding: 13px; border: 1px solid #ccd2dd;
+      border-radius: 8px; font-size: 16px;
+    }
+    button {
+      width: 100%; margin-top: 16px; padding: 14px;
+      border: 0; border-radius: 8px; background: #d92343;
+      color: white; font-size: 16px; font-weight: bold; cursor: pointer;
+    }
+    #result { margin-top: 22px; }
+    .status {
+      display: inline-block; padding: 8px 12px;
+      background: #edf2ff; border-radius: 20px; font-weight: bold;
+    }
+    .error { color: #b42318; }
+    .muted { color: #667085; font-size: 14px; }
+    footer { text-align: center; color: #667085; padding: 25px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>eSHOP MADA FRANCE</h1>
+    <p>Suivez votre commande</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Où en est ma commande ?</h2>
+      <p>Entrez le code de suivi reçu lors de votre demande.</p>
+
+      <form id="trackingForm">
+        <label for="token">Code de suivi</label>
+        <input id="token" type="text" required
+          placeholder="Collez votre code de suivi ici">
+        <button id="submitButton" type="submit">Consulter ma commande</button>
+      </form>
+
+      <div id="result" aria-live="polite"></div>
+    </div>
+  </main>
+
+  <footer>eShop Mada France — La France dans votre panier.</footer>
+
+  <script>
+    const form = document.getElementById("trackingForm");
+    const result = document.getElementById("result");
+    const button = document.getElementById("submitButton");
+
+    const statuses = {
+      received: "Demande reçue — vérification en cours",
+      reviewing: "Vérification de votre demande en cours",
+      validated: "Demande validée — paiement attendu",
+      payment_pending: "En attente de confirmation du paiement",
+      payment_received: "Paiement confirmé",
+      ordered: "Article commandé",
+      shipped: "Article expédié",
+      delivered: "Commande livrée",
+      refused: "Demande refusée"
+    };
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const token = document.getElementById("token").value.trim();
+      if (!/^[0-9a-f-]{36}$/i.test(token)) {
+        result.innerHTML = '<p class="error">Vérifiez votre code de suivi.</p>';
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Recherche en cours…";
+      result.textContent = "";
+
+      try {
+        const response = await fetch(
+          "/.netlify/functions/get-order-tracking?token=" +
+          encodeURIComponent(token)
+        );
+        const data = await response.json();
+
+        if (!response.ok || !data.order) {
+          throw new Error(data.error || "Commande introuvable.");
+        }
+
+        const order = data.order;
+        const status = statuses[order.status] || order.status || "En cours";
+
+        result.replaceChildren();
+
+        const title = document.createElement("h3");
+        title.textContent = "Commande n° " + order.order_number;
+        result.appendChild(title);
+
+        const badge = document.createElement("p");
+        badge.className = "status";
+        badge.textContent = status;
+        result.appendChild(badge);
+
+        const note = document.createElement("p");
+        note.className = "muted";
+        note.textContent =
+          "Le statut affiché correspond aux dernières informations enregistrées.";
+        result.appendChild(note);
+
+        if (order.admin_comment) {
+          const commentTitle = document.createElement("h4");
+          commentTitle.textContent = "Message concernant votre commande";
+          result.appendChild(commentTitle);
+
+          const comment = document.createElement("p");
+          comment.textContent = order.admin_comment;
+          result.appendChild(comment);
+        }
+      } catch (error) {
+        result.replaceChildren();
+        const message = document.createElement("p");
+        message.className = "error";
+        message.textContent =
+          error.message || "Impossible de consulter la commande.";
+        result.appendChild(message);
+      } finally {
+        button.disabled = false;
+        button.textContent = "Consulter ma commande";
+      }
+    });
+  </script>
+</body>
+</html>
