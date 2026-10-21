@@ -177,7 +177,7 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
   for(const card of cards){
    try{const u=new URL(card.querySelector(".url").value.trim());if(!["https:","http:"].includes(u.protocol))throw 0}catch(_){alert("Vérifiez chaque lien : il doit commencer par https:// ou http://.");card.querySelector(".url").focus();return}
    const photo=card.querySelector(".product-photo").files[0];
-   if(!photo){alert("Ajoutez une photo pour chaque article.");card.querySelector(".product-photo").focus();return}
+   if(photo && (!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)){alert("Chaque photo doit être au format JPG, PNG ou WEBP et faire 3 Mo maximum.");card.querySelector(".product-photo").focus();return}
    if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024){alert("Chaque photo doit être au format JPG, PNG ou WEBP et faire 3 Mo maximum.");card.querySelector(".product-photo").focus();return}
    if(!(Number(card.querySelector(".unit-price").value)>0)){alert("Saisissez le prix unitaire en euros de chaque article.");card.querySelector(".unit-price").focus();return}
   }
