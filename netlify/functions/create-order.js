@@ -124,7 +124,7 @@ exports.handler = async (event) => {
     );
 
     const orderPayload = {
-      tracking_token: crypto.randomBytes(32).toString("hex"),
+      tracking_token: crypto.randomUUID(),
       customer_name: data.customer_name.trim().slice(0, 150),
       phone_whatsapp: data.phone_whatsapp.trim().slice(0, 50),
       facebook_url: data.facebook_url.trim().slice(0, 500),
