@@ -27,11 +27,6 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
   <div class="top-right">FRANCE →<br>MADAGASCAR</div>
  </div>
 </header>
-<div style="text-align:center; padding:16px;">
-  <a href="suivi.html" style="display:inline-block; background:#10284b; color:white; padding:12px 22px; border-radius:8px; text-decoration:none; font-weight:bold;">
-    📦 Suivre ma commande
-  </a>
-</div>
 <main>
  <section class="hero" style="padding:0">
   <div class="shop-collage" aria-hidden="true"><span>👟</span><span>👜</span><span>📱</span><span>💻</span><span>📦</span><span>🧴</span></div>
@@ -96,21 +91,23 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
      </div>
     </div>
     <div class="submitrow"><button class="btn" type="submit">Préparer ma demande ↗</button><span class="status">Aucun paiement n'est effectué sur cette page.</span></div>
+    <div class="notice" id="demoNotice">Votre demande sera transmise pour vérification. Aucun paiement n’est effectué sur cette page.</div>
     <p class="fine">Les prix et la disponibilité sont vérifiés avant confirmation. Le transport international est séparé. N'effectuez aucun paiement avant d'avoir reçu et accepté le devis confirmé.</p>
-    <div class="notice" style="margin-top:20px; padding:20px; background:#f1f6ff; border-radius:12px;">
-  <h3>Besoin d’aide ? Contactez notre support</h3>
-  <p>Une question sur votre commande, un produit ou la livraison ?</p>
-  <p>
-    Facebook :
-    <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">
-      eShop Mada France
-    </a>
-  </p>
-  <p>Envoyez-nous un message sur notre page Facebook.</p>
-</div>
    </form>
   </div></div>
  </section>
+<section aria-labelledby="support-title" style="padding-top:0;background:#f7f9fd;">
+ <div class="wrap">
+  <div class="shell">
+   <div class="eyebrow">Besoin d’aide ?</div>
+   <h2 id="support-title">Contactez notre support</h2>
+   <p class="intro" style="margin-bottom:14px">Une question sur votre commande, un produit ou la livraison ?</p>
+   <p style="margin:0 0 8px">Facebook : <a href="https://www.facebook.com/" target="_blank" rel="noopener noreferrer">eShop Mada France</a></p>
+   <p class="contact-note">Envoyez-nous un message sur notre page Facebook.</p>
+   <p style="margin:16px 0 0"><a class="btn secondary" href="suivi.html">Suivre ma commande ↗</a></p>
+  </div>
+ </div>
+</section>
 </main>
 <footer><div class="wrap foot"><div><strong>eSHOP MADA FRANCE</strong><p>La France dans votre panier.</p></div><div><strong>France → Madagascar</strong><p>Des prix clairs, un suivi à chaque étape.</p></div></div></footer>
 <script>
@@ -170,7 +167,19 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
  }
  document.getElementById("addItem").addEventListener("click",addItem);
  function readAsBase64(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(",")[1]);reader.onerror=()=>reject(new Error("Lecture de la photo impossible."));reader.readAsDataURL(file);});}
- async function postJson(path,payload){const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});let result={};try{result=await response.json()}catch(_){ }if(!response.ok)throw new Error(result.error||"Une erreur est survenue. Réessayez.");return result;}
+ async function postJson(path,payload){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),30000);
+  try{
+   const response=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),signal:controller.signal});
+   let result={};try{result=await response.json()}catch(_){ }
+   if(!response.ok)throw new Error(result.error||"Une erreur est survenue. Réessayez.");
+   return result;
+  }catch(error){
+   if(error.name==="AbortError")throw new Error("Le serveur met trop de temps à répondre. Réessayez dans un instant.");
+   throw error;
+  }finally{clearTimeout(timeout)}
+ }
  document.getElementById("orderForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const form=e.currentTarget, button=form.querySelector('button[type="submit"]'), notice=document.getElementById("demoNotice"), cards=[...itemsEl.querySelectorAll(".product-card")];
@@ -191,7 +200,7 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
     const uploaded=await postJson("/.netlify/functions/upload-photo",{content_type:photo.type,image_base64});
     items.push({product_url:card.querySelector(".url").value.trim(),photo_path:uploaded.photo_path,category:card.querySelector(".category").value,quantity:Number(card.querySelector(".quantity").value),size_model:card.querySelector(".size").value.trim(),price_eur:Number(card.querySelector(".unit-price").value),comment:card.querySelector(".comment").value.trim()});
    }
-   const result=await postJson("/.netlify/functions/create-order",{customer_name:document.getElementById("customerName").value.trim(),phone_whatsapp:document.getElementById("phone").value.trim(),facebook_url:document.getElementById("facebook").value.trim(),city:document.getElementById("city").value.trim(),payment_method:document.getElementById("payment").value,customer_comment:document.getElementById("orderComments").value.trim(),items});
+   const result=await postJson("/.netlify/functions/create-order",{customer_name:document.getElementById("customerName").value.trim(),phone_whatsapp:document.getElementById("phone").value.trim(),facebook_url:document.getElementById("facebook").value.trim(),city:document.getElementById("city").value.trim(),payment_method:document.getElementById("payment").value,customer_comment:document.getElementById("orderComments").value.trim(),customer_comments:document.getElementById("orderComments").value.trim(),items});
    notice.textContent="Demande enregistrée avec succès. Numéro de commande : "+(result.order_number||"confirmé")+(result.tracking_token?" — Code de suivi : "+result.tracking_token:"")+". Aucun paiement n’a été effectué sur cette page.";
    notice.scrollIntoView({behavior:"smooth",block:"center"});
   }catch(error){notice.textContent="La demande n’a pas pu être confirmée : "+error.message+". Vérifiez votre connexion et réessayez. Si une photo a déjà été envoyée, elle peut rester dans le stockage même si la commande échoue.";alert(notice.textContent)}
