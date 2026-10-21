@@ -142,9 +142,14 @@ exports.handler = async (event) => {
     );
 
     if (!response.ok) {
-      console.error("Mise à jour commande :", await response.text());
-      return respond(502, { error: "Impossible de mettre à jour la commande." });
-    }
+  const details = await response.text();
+  console.error("Mise à jour commande :", response.status, details);
+
+  return respond(502, {
+    error: "Erreur Supabase (" + response.status + ") : " + details
+  });
+}
+
 
     const updated = await response.json();
 
