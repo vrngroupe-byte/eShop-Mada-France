@@ -124,7 +124,7 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
   card.innerHTML=`<div class="cardhead"><h3>Article <span class="number"></span></h3><button class="remove" type="button" hidden>Supprimer</button></div>
   <div class="grid">
    <div class="field full"><label for="url-${id}">Lien du produit *</label><input id="url-${id}" class="url" type="url" required placeholder="https://www.exemple.fr/mon-article" inputmode="url"><span class="hint">Copiez le lien exact de la page du produit.</span></div>
-<div class="field full"><label for="photo-${id}">Photo ou capture d’écran du produit (facultatif)</label><div class="photo-upload"><input id="photo-${id}" class="product-photo" type="file" accept="image/jpeg,image/png,image/webp"><span class="hint">Choisissez une image JPG, PNG ou WEBP. Maximum 3 Mo par photo.</span><img class="photo-preview" alt="Aperçu de la photo du produit"></div></div>
+   <div class="field full"><label for="photo-${id}">Photo ou capture d’écran du produit *</label><div class="photo-upload"><input id="photo-${id}" class="product-photo" type="file" accept="image/jpeg,image/png,image/webp" required><span class="hint">Choisissez une image JPG, PNG ou WEBP. Maximum 3 Mo par photo.</span><img class="photo-preview" alt="Aperçu de la photo du produit"></div></div>
    <div class="field"><label for="cat-${id}">Type de produit *</label><select id="cat-${id}" class="category" required>${options()}</select></div>
    <div class="field"><label for="qty-${id}">Quantité *</label><input id="qty-${id}" class="quantity" type="number" min="1" max="99" value="1" required inputmode="numeric"></div>
    <div class="field"><label for="price-${id}">Prix unitaire (€) *</label><input id="price-${id}" class="unit-price" type="number" min="0.01" step="0.01" required placeholder="Ex. : 19,90" inputmode="decimal"></div>
@@ -177,7 +177,7 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
   for(const card of cards){
    try{const u=new URL(card.querySelector(".url").value.trim());if(!["https:","http:"].includes(u.protocol))throw 0}catch(_){alert("Vérifiez chaque lien : il doit commencer par https:// ou http://.");card.querySelector(".url").focus();return}
    const photo=card.querySelector(".product-photo").files[0];
-   if(photo&&(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024)){alert("Chaque photo doit être au format JPG, PNG ou WEBP et faire 3 Mo maximum.");card.querySelector(".product-photo").focus();return}
+   if(!photo){alert("Ajoutez une photo pour chaque article.");card.querySelector(".product-photo").focus();return}
    if(!["image/jpeg","image/png","image/webp"].includes(photo.type)||photo.size>3*1024*1024){alert("Chaque photo doit être au format JPG, PNG ou WEBP et faire 3 Mo maximum.");card.querySelector(".product-photo").focus();return}
    if(!(Number(card.querySelector(".unit-price").value)>0)){alert("Saisissez le prix unitaire en euros de chaque article.");card.querySelector(".unit-price").focus();return}
   }
@@ -187,28 +187,9 @@ footer{background:#0b1c34;color:#d7e1ef;padding:29px 0}footer .foot{display:flex
   try{
    const items=[];
    for(const card of cards){
-    const photoInput = card.querySelector(".product-photo");
-const photo = photoInput.files && photoInput.files[0];
-let photoPath = null;
-
-if (photo) {
-  const image_base64 = await readAsBase64(photo);
-  const uploaded = await postJson("/.netlify/functions/upload-photo", {
-    content_type: photo.type,
-    image_base64
-  });
-  photoPath = uploaded.photo_path;
-}
-
-items.push({
-  product_url: card.querySelector(".url").value.trim(),
-  photo_path: photoPath,
-  category: card.querySelector(".category").value,
-  quantity: Number(card.querySelector(".quantity").value),
-  size_model: card.querySelector(".size").value.trim(),
-  price_eur: Number(card.querySelector(".unit-price").value),
-  comment: card.querySelector(".comment").value.trim()
-});
+    const photo=card.querySelector(".product-photo").files[0], image_base64=await readAsBase64(photo);
+    const uploaded=await postJson("/.netlify/functions/upload-photo",{content_type:photo.type,image_base64});
+    items.push({product_url:card.querySelector(".url").value.trim(),photo_path:uploaded.photo_path,category:card.querySelector(".category").value,quantity:Number(card.querySelector(".quantity").value),size_model:card.querySelector(".size").value.trim(),price_eur:Number(card.querySelector(".unit-price").value),comment:card.querySelector(".comment").value.trim()});
    }
    const result=await postJson("/.netlify/functions/create-order",{customer_name:document.getElementById("customerName").value.trim(),phone_whatsapp:document.getElementById("phone").value.trim(),facebook_url:document.getElementById("facebook").value.trim(),city:document.getElementById("city").value.trim(),payment_method:document.getElementById("payment").value,customer_comment:document.getElementById("orderComments").value.trim(),items});
    notice.textContent="Demande enregistrée avec succès. Numéro de commande : "+(result.order_number||"confirmé")+(result.tracking_token?" — Code de suivi : "+result.tracking_token:"")+". Aucun paiement n’a été effectué sur cette page.";
